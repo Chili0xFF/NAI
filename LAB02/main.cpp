@@ -24,7 +24,7 @@ double optimise(auto function, auto domain, int maxIterations=1000){
     
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    cout<<"Time needed: "<<cpu_time_used<<" Result: ";
+    cout<<"Iterations: "<<maxIterations<<" Time needed: "<<cpu_time_used<<" Result: ";
     return lowest;
 }
 
@@ -48,7 +48,7 @@ int main(){
     };
     vector<double> domain={-4.5,4.5};
     for(int i=0;i<20;i++){
-        cout<<optimise(beal_f,domain,(i+1)*10000)<<endl;
+        cout<<optimise(beal_f,domain,10000)<<endl;
     }
     return 0;
 }

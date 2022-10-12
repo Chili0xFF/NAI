@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}\\${fileBasenameNoExtension}.exe",
-            "args": [""],
+            "args": ["add","4","5"],
             "stopAtEntry": false,
             "cwd": "C:\\msys64\\mingw64\\bin",
             "environment": [],
