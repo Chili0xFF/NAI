@@ -8,29 +8,49 @@ using domain_t = std::vector<double>;
 std::random_device rd;
 std::mt19937 mt_generator(rd());
 
-double optimise(auto function, auto domain, int maxIterations=1000){
-    clock_t start, end;
-    double cpu_time_used;
-    start = clock();
-    std::uniform_real_distribution<double> dist(domain.at(0), domain.at(1));
-    double lowest=function(domain.at(0), domain.at(1));
-    for(int i=0;i<maxIterations-1;i++){
-        double rand1=dist(mt_generator);
-        double rand2=dist(mt_generator);
-        double temp;
-        temp=function(rand1,rand2);
-        if(temp<lowest)lowest=temp;
-    }
-    
-    end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    cout<<"Iterations: "<<maxIterations<<" Time needed: "<<cpu_time_used<<" Result: ";
-    return lowest;
+void result(double time, double result){
+    using namespace std;
+    cout<<"\nTime: "<<time<<" Result: "<<result;
 }
 
-int main(){
-    double result=0;
-    
+void climb(auto function, auto domain, int maxIterations=1000){
+
+}
+
+vector<double> neighbours(){
+    vector<double> neightbours
+}
+
+void anneal(auto function, auto domain, int maxIterations=1000, int step=5){
+    double V;
+    std::uniform_real_distribution<double> dist(domain.at(0), domain.at(1));
+    vector<double[]> sk;
+    sk[0]=dist(mt_generator),dist(mt_generator);
+    double rand1 = dist(mt_generator);
+    double rand2 = dist(mt_generator);
+    sk.at(0)=function(rand1, rand2);
+
+
+
+    //czym jest K-.ilośc iteracji, czym jest uk->losujemy za każdym razem gdy potrzebujemy, czym jest tk
+
+    for(int k=1;k<maxIterations;k+=step){
+        double Tk = 1.0/step;           //Wyznaczamy temperature
+
+        vector<double> NK = neighbours();
+
+        double rand1 = dist(mt_generator);
+        double rand2 = dist(mt_generator);
+        if(function(rand1,rand2)>=sk){
+
+        }
+    }
+
+}
+
+
+
+int main() {
     auto beal_f = [](double x, double y) {
         double firstPart = pow((1.5-x+(x*y)),2);
         double secondPart = pow(2.25-x+(x*pow(y,2)),2);
@@ -48,7 +68,8 @@ int main(){
     };
     vector<double> domain={-4.5,4.5};
     for(int i=0;i<20;i++){
-        cout<<optimise(beal_f,domain,1000000)<<endl;
+        climb(beal_f,domain,10000);
     }
+
     return 0;
 }
