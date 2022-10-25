@@ -9,7 +9,7 @@
 					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
 					"minimumCMakeVersion" : 
 					{
-						"string" : "3.23"
+						"string" : "3.21.1"
 					},
 					"projectIndex" : 0,
 					"source" : ".",
@@ -49,12 +49,12 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "C:/Users/s23049/Documents/GitHub/NAI/LAB03/cmake-build-debug",
-		"source" : "C:/Users/s23049/Documents/GitHub/NAI/LAB03"
+		"build" : "E:/GithubRepos/NAI/LAB03/cmake-build-debug",
+		"source" : "E:/GithubRepos/NAI/LAB03"
 	},
 	"version" : 
 	{
 		"major" : 2,
-		"minor" : 4
+		"minor" : 3
 	}
 }
