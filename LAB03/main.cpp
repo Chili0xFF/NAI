@@ -97,7 +97,11 @@ void climb(auto function, auto domain, int maxIterations=1000, double step=1){
     writeOutResults(cpu_time_used,best);
 }
 
-void anneal(auto function, auto domain, int maxIterations=1000, double step=5){
+void anneal(auto function, auto domain, int maxIterations=1000, double step=1.0){
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
+
     std::uniform_real_distribution<double> dist(domain.at(0), domain.at(1));
     std::uniform_real_distribution<double> randomiserd(0, 3);
     std::uniform_real_distribution<double> randomiseru(0, 1);
@@ -105,12 +109,12 @@ void anneal(auto function, auto domain, int maxIterations=1000, double step=5){
     double x = dist(mt_generator);
     double y = dist(mt_generator);
     s.push_back(function(x,y));
-    cout<<"Starting value: ";
-    cout<<s.back()<<endl;
+//    cout<<"Starting value: ";
+//    cout<<s.back()<<endl;
     //cout<<"\nD00PA\n";
-    for(int k=1;k<maxIterations;k+=step){
+    for(double k=1.0;k<maxIterations;k+=step){
         //cout<<"\nD0"<<k<<"PA\n";
-
+        //cout<<k<<endl;
         double a = neighbours(x,step, domain).at(randomiserd(mt_generator));
         double b = neighbours(y,step, domain).at(randomiserd(mt_generator));
         //cout<<endl<<"a:"<<a<<" b: "<<b<<endl;
@@ -140,7 +144,10 @@ void anneal(auto function, auto domain, int maxIterations=1000, double step=5){
         }
     }
     //cout<<"koniec\n";
-    cout<<"End value: "<<s.back()<<endl;
+    end = clock();
+    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    writeOutResults(cpu_time_used,s.back());
+    //cout<<"End value: "<<s.back()<<endl;
 }
 
 
@@ -166,9 +173,9 @@ int main() {
     for(int i=0;i<5;i++){
         climb(beal_f,domain,1000000);
     }
-    cout<<"\nAnneal:\n";
+    cout<<"\nAnneal:";
     for(int i=0;i<5;i++){
-        anneal(beal_f,domain,1000000,1.5);
+        anneal(beal_f,domain,1000000,0.2);
     }
 
     return 0;
