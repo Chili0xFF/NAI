@@ -4,17 +4,27 @@
 #include <random>
 #include <time.h>
 #include <algorithm>
+#include <vector>
 std::random_device rd;
 std::mt19937 mt_generator(rd());
 using chromosome_t = std::vector<int>;
 using population_t = std::vector<chromosome_t>;
 using result_t = std::vector<std::vector<double>>;
+using fitness_f = std::function<double(const chromosome_t &)>;
+using term_condition_f = std::function<bool(const population_t &, const std::vector<double> &)>;
+using selection_f = std::function<int(const std::vector<double> &)>;
+using crossover_f = std::function<std::vector<chromosome_t>(const std::vector<chromosome_t> &)>;
+using mutation_f = std::function<chromosome_t(const chromosome_t, double)>;
+
+
 auto beal_f = [](double x, double y) {
     double firstPart = pow((1.5-x+(x*y)),2);
     double secondPart = pow(2.25-x+(x*pow(y,2)),2);
     double thirdPart = pow(2.625-x+x*pow(y,3),2);
     return firstPart+secondPart+thirdPart;
 };
+
+
 population_t populate(int pop_size, int chrom_size){
     srand(time(nullptr));
     population_t population;
@@ -47,94 +57,243 @@ double translate(chromosome_t chromosome){
     if(flagNegative)result*=-1;
     return result;
 }
-auto genetic_algorithm = [](
-        auto initial_population, auto fitness, auto term_condition,
-        auto selection, double p_crossover,
-        auto crossover, double p_mutation,  auto mutation) {
+
+population_t genetic_algorithm(population_t initial_population,
+                               fitness_f fitness,
+                               term_condition_f term_condition,
+                               selection_f selection,
+                               double p_crossover, crossover_f crossover,
+                               double p_mutation, mutation_f mutation) {
     using namespace std;
-    uniform_real_distribution<double> uniform(0.0,1.0);
+    uniform_real_distribution<double> uniform(0.0, 1.0);
     auto population = initial_population;
-    vector<double> population_fit = fitness(population);
-    while (!term_condition(population,population_fit)) {
-        auto parents_indexes = selection(population_fit);
-        decltype(population) new_population;
-        for (int i = 0 ; i < parents_indexes.size(); i+=2) {
-            decltype(initial_population) offspring = {population[i],population[i+1]};
+    vector<double> population_fit(population.size());
+    transform(population.begin(), population.end(), population_fit.begin(),fitness);
+    while (!term_condition(population, population_fit)) {
+        vector<int> parents_indexes(population.size());
+        population_t new_population(population.size());
+        // calculate fitness
+        transform(population_fit.begin(), population_fit.end(),
+                  parents_indexes.begin(),
+                  [&](auto e) { return selection(population_fit); });
+        // perform crossover operations
+        for (int i = 0; i < parents_indexes.size() - 1; i += 2) {
+            vector<chromosome_t> offspring = {population[parents_indexes[i]], population[parents_indexes[i + 1]]};
             if (uniform(mt_generator) < p_crossover) {
                 offspring = crossover(offspring);
             }
-            for (auto chromosome : offspring) new_population.push_back(chromosome);
+            new_population[i] = offspring[0];
+            new_population[i + 1] = offspring[1];
         }
-        for (auto & chromosome : new_population) {
-            chromosome = mutation(chromosome,p_mutation);
+        for (auto &chromosome : new_population) {
+            chromosome = mutation(chromosome, p_mutation);
         }
         population = new_population;
-        population_fit = fitness(population);
+        std::transform(population.begin(), population.end(), population_fit.begin(),
+                       fitness);
     }
     return population;
 };
 
-result_t fitness_function(population_t population){
 
+int selection_roulette(std::vector<double> fitnesses);
 
-    result_t top10;
-    std::vector<double> translated;
-    result_t results;
-    for(chromosome_t chrom : population){
-        chromosome_t chrom_a, chrom_b;
-        for (int i = 0; i < (chrom.size()/2)-1; ++i) {
-            chrom_a.push_back(chrom.at(i));
-        }
-        for (int i=chrom.size()/2;i<chrom.size()-1;i++){
-            chrom_b.push_back(chrom.at(i));
-        }
-        double a = translate(chrom_a);
-        double b = translate(chrom_b);
-        translated.push_back(a);
-        translated.push_back(b);
-        //std::cout<<"A: "<<a<<" B: "<<b<<std::endl;
-
+double fitness(const chromosome_t chromosome){
+    using namespace std;
+    vector<double> translated;
+    chromosome_t chrom_a, chrom_b;
+    for (int i = 0; i < (chromosome.size()/2)-1; ++i) {
+        cout<<chromosome.at(i);
+        chrom_a.push_back(chromosome.at(i));
     }
-
-    for(int i=0;i<translated.size();i+=2){
-        std::vector<double> temp={
-                (1/(beal_f(translated.at(i),translated.at(i+1)))),
-                (translated.at(i)),
-                (translated.at(i+1))
-        };
-        results.push_back(temp);
-        //std::cout<<"Beal:"<<1/results.back()[0]<<" Score: "<<results.back()<<std::endl;
+    cout<<endl;
+    for (int i=chromosome.size()/2;i<chromosome.size()-1;i++){
+        cout<<chromosome.at(i);
+        chrom_b.push_back(chromosome.at(i));
     }
-using namespace std;
-    for(int i=0;i<10;i++){
-        vector<double> best={0,0,0};
-        int bestId=0;
-
-        for(int j=0;j<results.size();j++){
-            //cout<<j+1<<". Score: "<<results.at(j).at(0)<<" X: "<<results.at(j).at(1)<<" Y: "<<results.at(j).at(2)<<endl;
-            if(results.at(j).at(0)>best.at(0)){
-                best=results.at(j);
-                bestId=j;
-            }
-        }
-        top10.push_back(best);
-        results.at(bestId)={0,0,0};
-    }
-    return top10;
+    cout<<endl;
+    double a = translate(chrom_a);
+    double b = translate(chrom_b);
+    double fit = 1/(beal_f(a,b));
+    cout<<"x: "<<a<<" y: "<<b<<" score: "<<fit<<endl;
+    return fit;
 }
-std::vector<int> selection_empty(std::vector<double> fitnesses) {
-    return {};
-}
+
 std::vector<chromosome_t > crossover_empty(std::vector<chromosome_t > parents) {
     return parents;
 }
 chromosome_t mutation_empty(chromosome_t parents, double p_mutation) {
     return parents;
 }
-
-
+std::ostream &operator<<(std::ostream &o, const chromosome_t chromosome) {
+    for (const int p : chromosome) {
+        o << p;
+    }
+    return o;
+}
+std::ostream &operator<<(std::ostream &o,
+                         std::pair<population_t, fitness_f> pop) {
+    for (const auto p : pop.first) {
+        o << "{" << p << " " << (pop.second(p)) << "} ";
+    }
+    return o;
+}
 int main() {
+    auto himmel_f = [](double x, double y) { return pow(pow(x,2)+y-11,2) + pow(x+pow(y,2)-7,2); };
+    auto tcamel_f = [](double x, double y) {
+        double firstPart = 2*pow(x,2);
+        double secondPart = 1.05*pow(x,4);
+        double thirdPart = (pow(x,6))/6;
+        double fourthPart = x*y;
+        double fifthPart = pow(y,2);
+        return (firstPart-secondPart+thirdPart+fourthPart+fifthPart);
+    };
+    using namespace std;
+    fitness({0,1,1,1,0,1,0,0,0,0,1,
+             0,0,0,1,0,0,1,1,0,0,0});
+    population_t population = populate(10000,118);
+    population_t result = genetic_algorithm(
+            population, fitness,
+            [](auto a, auto b) {
+                static int i = 0;
+                i++;
+                //cout << i << ": " << make_pair(a, fitness) << endl;
+                return i > 10;
+            },
+            selection_roulette, 0.5, crossover_empty, 0.01, mutation_empty);
 
+    //cout << make_pair(result, fitness);
+    //cout << endl;
+    return 0;
+}
+
+int selection_roulette(std::vector<double> fitnesses) {
+    return 0;
+}
+/*
+ * // zaczynamy od tego
+#include <algorithm>
+#include <functional>
+#include <iostream>
+#include <random>
+#include <vector>
+std::random_device rd;
+std::mt19937 mt_generator(rd());
+using chromosome_t = std::vector<int>;
+using population_t = std::vector<chromosome_t>;
+using fitness_f = std::function<double(const chromosome_t &)>;
+using term_condition_f =
+        std::function<bool(const population_t &, const std::vector<double> &)>;
+using selection_f = std::function<int(const std::vector<double> &)>;
+using crossover_f =
+        std::function<std::vector<chromosome_t>(const std::vector<chromosome_t> &)>;
+using mutation_f = std::function<chromosome_t(const chromosome_t, double)>;
+population_t genetic_algorithm(population_t initial_population,
+                               fitness_f fitness,
+                               term_condition_f term_condition,
+                               selection_f selection, double p_crossover,
+                               crossover_f crossover, double p_mutation,
+                               mutation_f mutation) {
+    using namespace std;
+    uniform_real_distribution<double> uniform(0.0, 1.0);
+    auto population = initial_population;
+    vector<double> population_fit(population.size());
+    transform(population.begin(), population.end(), population_fit.begin(),fitness);
+    while (!term_condition(population, population_fit)) {
+        vector<int> parents_indexes(population.size());
+        population_t new_population(population.size());
+        // calculate fitness
+        transform(population_fit.begin(), population_fit.end(),
+                  parents_indexes.begin(),
+                  [&](auto e) { return selection(population_fit); });
+        // perform crossover operations
+        for (int i = 0; i < parents_indexes.size() - 1; i += 2) {
+            vector<chromosome_t> offspring = {population[parents_indexes[i]], population[parents_indexes[i + 1]]};
+            if (uniform(mt_generator) < p_crossover) {
+                offspring = crossover(offspring);
+            }
+            new_population[i] = offspring[0];
+            new_population[i + 1] = offspring[1];
+        }
+        for (auto &chromosome : new_population) {
+            chromosome = mutation(chromosome, p_mutation);
+        }
+        population = new_population;
+        std::transform(population.begin(), population.end(), population_fit.begin(),
+                       fitness);
+    }
+    return population;
+};
+using chromosome_t = std::vector<int>;
+using population_t = std::vector<chromosome_t>;
+int selection_empty(std::vector<double> fitnesses) {
+    return 0;
+}
+int selection_tournament_2(std::vector<double> fitnesses) {
+    std::uniform_int_distribution<int> uniform(0, fitnesses.size()-1);
+    int a = uniform(mt_generator);
+    int b = uniform(mt_generator);
+    return (fitnesses[a]>fitnesses[b])?a:b;
+}
+std::vector<chromosome_t> crossover_empty(std::vector<chromosome_t> parents) {
+    return parents;
+}
+std::vector<chromosome_t> crossover_two_point(std::vector<chromosome_t> parents) {
+    using namespace std;
+    uniform_int_distribution<int> locus(0,parents.at(0).size()-1);
+    int a = locus(mt_generator);
+    int b = locus(mt_generator);
+    if (a > b) swap(a,b);
+    auto children = parents;
+    for (int i = a; i < b; i++) {
+        swap(children[0][i],children[1][i]);
+    }
+    return children;
+}
+chromosome_t mutation_empty(const chromosome_t parent, double p_mutation) {
+    return parent;
+}
+chromosome_t mutation_one_point(const chromosome_t parent, double p_mutation) {
+    using namespace std;
+    uniform_real_distribution<double> uni(0.0,1.0);
+    // mutation??
+    if (uni(mt_generator) < p_mutation) {
+         uniform_int_distribution<int> locus(0,parent.size()-1);
+         chromosome_t child = parent;
+         auto l = locus(mt_generator);
+         child[l] = 1 - child[l];
+        return child;
+    } else
+        return parent;
+}
+
+double fitness_function(const chromosome_t &chromosome) {
+    return std::accumulate(chromosome.begin(), chromosome.end(), 0);
+}
+std::vector<chromosome_t> generate_initial_population(int n) {
+    std::vector<chromosome_t> ret(n);
+    std::uniform_int_distribution<int> uniform(0, 1);
+    std::transform(ret.begin(), ret.end(), ret.begin(), [&](auto e) {
+        chromosome_t c(8);
+        for (int i = 0; i < c.size(); i++) c[i] = uniform(mt_generator);
+        return c;
+    });
+    return ret;
+}
+std::ostream &operator<<(std::ostream &o, const chromosome_t chromosome) {
+    for (const int p : chromosome) {
+        o << p;
+    }
+    return o;
+}
+std::ostream &operator<<(std::ostream &o,
+                         std::pair<population_t, fitness_f> pop) {
+    for (const auto p : pop.first) {
+        o << "{" << p << " " << (pop.second(p)) << "} ";
+    }
+    return o;
+}
+int main() {
     auto himmel_f = [](double x, double y) { return pow(pow(x,2)+y-11,2) + pow(x+pow(y,2)-7,2); };
     auto tcamel_f = [](double x, double y) {
         double firstPart = 2*pow(x,2);
@@ -147,36 +306,19 @@ int main() {
 
     using namespace std;
     population_t population = populate(10000,100+(23049%10)*2);
-//    for (chromosome_t chromosome: result) {
-//        cout << "[";
-//        for (int p: chromosome) {
-//            cout << p;
-//        }
-//        cout << "]\n";
-//    }
-//    cout << endl;
-//    auto result = genetic_algorithm(population,
-//                                    fitness_function,
-//                                    [](auto a, auto b){return true;},
-//                                    selection_empty, 1.0,
-//                                    crossover_empty,
-//                                    0.01, mutation_empty);
-//    for(chromosome_t chrom : population){
-//        cout<<translate(chrom)<<endl;
-//    }
-    auto result = fitness_function(population);
-    cout<<"top10 score\n";
-    for(int i=0;i<result.size();i++){
-        cout<<i+1<<". Score: "<<result.at(i).at(0)<<" X: "<<result.at(i).at(1)<<" Y: "<<result.at(i).at(2)<<endl;
-    }
-    while(true){
-        double a,b;
-        cout<<"a: ";
-        cin>>a;
-        if(a==0.0)return 0;
-        cout<<"b: ";
-        cin>>b;
-        cout<<beal_f(a,b)<<endl;
-    }
+    auto result = genetic_algorithm(
+            population, fitness,
+            [](auto a, auto b) {
+                static int i = 0;
+                i++;
+                cout << i << ": " << make_pair(a, fitness_function) << endl;
+                return i > 10;
+            },
+            selection_roulette, 0.5, crossover_empty, 0.01, mutation_empty);
+
+    cout make_pair(result, fitness_function);
+    cout << endl;
+    return 0;
 
 }
+ */
