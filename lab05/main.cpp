@@ -11,11 +11,10 @@ using chromosome_t = std::vector<int>;
 using population_t = std::vector<chromosome_t>;
 using result_t = std::vector<std::vector<double>>;
 using fitness_f = std::function<double(const chromosome_t &)>;
-using term_condition_f = std::function<bool(const population_t &, const std::vector<double> &)>;
+using term_condition_f = std::function<bool(const population_t &, const std::vector<double> &, const int)>;
 using selection_f = std::function<int(const std::vector<double> &)>;
 using crossover_f = std::function<std::vector<chromosome_t>(const std::vector<chromosome_t> &)>;
 using mutation_f = std::function<chromosome_t(const chromosome_t, double)>;
-
 
 auto beal_f = [](double x, double y) {
     double firstPart = pow((1.5-x+(x*y)),2);
@@ -23,7 +22,17 @@ auto beal_f = [](double x, double y) {
     double thirdPart = pow(2.625-x+x*pow(y,3),2);
     return firstPart+secondPart+thirdPart;
 };
-
+auto himmel_f = [](double x, double y) {
+    return pow(pow(x,2)+y-11,2) + pow(x+pow(y,2)-7,2);
+};
+auto tcamel_f = [](double x, double y) {
+    double firstPart = 2*pow(x,2);
+    double secondPart = 1.05*pow(x,4);
+    double thirdPart = (pow(x,6))/6;
+    double fourthPart = x*y;
+    double fifthPart = pow(y,2);
+    return (firstPart-secondPart+thirdPart+fourthPart+fifthPart);
+};
 
 population_t populate(int pop_size, int chrom_size){
     srand(time(nullptr));
@@ -58,22 +67,39 @@ double translate(chromosome_t chromosome){
     return result;
 }
 int PopulationIndex=0;
-
+bool stats_status=false;
 void writePopulation(population_t vector1, std::vector<double> vector2);
+double popAvg(population_t population);
+
+void writePopulation(population_t vector1, std::vector<double> vector2) {
+    std::cout<<"Population"<<PopulationIndex<<": \n";
+    for(int i=0;i<vector1.size();i++){
+        std::cout<<vector2.at(i)<<" ";
+    }
+    std::cout<<std::endl;
+};
+
+int selection_roulette(std::vector<double> fitnesses);
+
+double popMax(population_t population);
+
+double popMin(population_t population);
+
+void writeStats(population_t vector1);
 
 population_t genetic_algorithm(population_t initial_population,
                                fitness_f fitness,
                                term_condition_f term_condition,
                                selection_f selection,
                                double p_crossover, crossover_f crossover,
-                               double p_mutation, mutation_f mutation) {
+                               double p_mutation, mutation_f mutation, int iterator) {
     using namespace std;
     uniform_real_distribution<double> uniform(0.0, 1.0);
     auto population = initial_population;
     vector<double> population_fit(population.size());
     transform(population.begin(), population.end(), population_fit.begin(),fitness);
-    while (!term_condition(population, population_fit)) {
-        writePopulation(population,population_fit);
+    while (!term_condition(population, population_fit, iterator)) {
+        if(stats_status)writeStats(population);
         vector<int> parents_indexes(population.size());
         population_t new_population(population.size());
         // calculate fitness
@@ -95,21 +121,10 @@ population_t genetic_algorithm(population_t initial_population,
         population = new_population;
         std::transform(population.begin(), population.end(), population_fit.begin(),
                        fitness);
-    PopulationIndex++;
+        PopulationIndex++;
     }
     return population;
 }
-
-void writePopulation(population_t vector1, std::vector<double> vector2) {
-    std::cout<<"Population"<<PopulationIndex<<": \n";1
-    for(int i=0;i<vector1.size();i++){
-        std::cout<<vector2.at(i)<<" ";
-    }
-    std::cout<<std::endl;
-};
-
-
-int selection_roulette(std::vector<double> fitnesses);
 
 double fitness(const chromosome_t chromosome){
     using namespace std;
@@ -166,31 +181,39 @@ std::ostream &operator<<(std::ostream &o,
     }
     return o;
 }
-int main() {
-    auto himmel_f = [](double x, double y) { return pow(pow(x,2)+y-11,2) + pow(x+pow(y,2)-7,2); };
-    auto tcamel_f = [](double x, double y) {
-        double firstPart = 2*pow(x,2);
-        double secondPart = 1.05*pow(x,4);
-        double thirdPart = (pow(x,6))/6;
-        double fourthPart = x*y;
-        double fifthPart = pow(y,2);
-        return (firstPart-secondPart+thirdPart+fourthPart+fifthPart);
-    };
+int main(int argc, char **argv) {
     using namespace std;
-    population_t population = populate(1000,118);
+    int size = stoi(argv[1]);
+    int iteration = stoi(argv[2]);
+    double p_crossover = stod(argv[3]);
+    double p_mutation = stod(argv[4]);
+    string flag_stats = argv[5];
+    //double odchyl = stod(argv[6]);
+    if(flag_stats=="d")stats_status=true;
+    population_t population = populate(size,118);
     population_t result = genetic_algorithm(
             population, fitness,
-            [](auto a, auto b) {
+            [](auto a, auto b,int iteration) {
                 static int i = 0;
                 i++;
                 //cout << i << ": " << make_pair(a, fitness) << endl;
-                return i > 10;
+                return i > iteration;
             },
-            selection_roulette, 0.1, crossover_1p, 0.5, mutation_singular);
+            selection_roulette, p_crossover, crossover_1p, p_mutation, mutation_singular, iteration);
 
-    //cout << make_pair(result, fitness);
-    //cout << endl;
+    writeStats(result);
+    double best= fitness(result.at(0));
+    for(chromosome_t chrom : result){
+        cout<<translate(chrom);
+    }
     return 0;
+}
+
+void writeStats(population_t vector1) {
+    std::cout<<PopulationIndex<<std::endl;
+    popAvg(vector1);
+    popMax(vector1);
+    popMin(vector1);
 }
 
 int selection_roulette(std::vector<double> fitnesses) {
@@ -211,6 +234,36 @@ int selection_roulette(std::vector<double> fitnesses) {
         }
     }
     return resultIndex;
+}
+
+double popAvg(population_t population){
+    double result=0;
+    for(chromosome_t chrom : population){
+        result+=fitness(chrom);
+    }
+    result/=population.size();
+    std::cout<<"Average of population: "<<result<<"\n";
+    return result;
+}
+
+double popMin(population_t population) {
+    double result= fitness(population.at(0));
+    for(chromosome_t chrom : population){
+        double temp = fitness(chrom);
+        if(temp<result)result=temp;
+    }
+    std::cout<<"Minimum of population: "<<result<<"\n";
+    return result;
+}
+
+double popMax(population_t population) {
+    double result= fitness(population.at(0));
+    for(chromosome_t chrom : population){
+        double temp = fitness(chrom);
+        if(temp>result)result=temp;
+    }
+    std::cout<<"Maximum of population: "<<result<<"\n";
+    return result;
 }
 /*
  * // zaczynamy od tego

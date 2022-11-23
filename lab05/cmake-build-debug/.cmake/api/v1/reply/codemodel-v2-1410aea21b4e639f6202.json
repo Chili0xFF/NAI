@@ -49,12 +49,12 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "E:/GithubRepos/NAI/lab05/cmake-build-debug",
-		"source" : "E:/GithubRepos/NAI/lab05"
+		"build" : "C:/Users/s23049/Documents/GitHub/NAI/lab05/cmake-build-debug",
+		"source" : "C:/Users/s23049/Documents/GitHub/NAI/lab05"
 	},
 	"version" : 
 	{
 		"major" : 2,
-		"minor" : 3
+		"minor" : 4
 	}
 }

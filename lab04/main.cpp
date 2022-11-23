@@ -23,7 +23,15 @@ auto beal_f = [](double x, double y) {
     double thirdPart = pow(2.625-x+x*pow(y,3),2);
     return firstPart+secondPart+thirdPart;
 };
-
+auto himmel_f = [](double x, double y) { return pow(pow(x,2)+y-11,2) + pow(x+pow(y,2)-7,2); };
+auto tcamel_f = [](double x, double y) {
+    double firstPart = 2*pow(x,2);
+    double secondPart = 1.05*pow(x,4);
+    double thirdPart = (pow(x,6))/6;
+    double fourthPart = x*y;
+    double fifthPart = pow(y,2);
+    return (firstPart-secondPart+thirdPart+fourthPart+fifthPart);
+};
 
 population_t populate(int pop_size, int chrom_size){
     srand(time(nullptr));
@@ -45,7 +53,7 @@ double translate(chromosome_t chromosome){
 
     double twos=1;
     for(int i=2;i>=1;--i){
-        result+=(chromosome.at(i)*twos);                            //DODAJ TUTAJ ABY MOGŁO DAWAĆ WARTOŚCI UJEMNE i ułamki, podzielic translate na x i y w połwoei
+        result+=(chromosome.at(i)*twos);                            //przerabia chromosom na jego wartość double
         twos *= 2.0;
     }
     twos = 2;
@@ -139,15 +147,7 @@ std::ostream &operator<<(std::ostream &o,
     return o;
 }
 int main() {
-    auto himmel_f = [](double x, double y) { return pow(pow(x,2)+y-11,2) + pow(x+pow(y,2)-7,2); };
-    auto tcamel_f = [](double x, double y) {
-        double firstPart = 2*pow(x,2);
-        double secondPart = 1.05*pow(x,4);
-        double thirdPart = (pow(x,6))/6;
-        double fourthPart = x*y;
-        double fifthPart = pow(y,2);
-        return (firstPart-secondPart+thirdPart+fourthPart+fifthPart);
-    };
+
     using namespace std;
     fitness({0,1,1,1,0,1,0,0,0,0,1,
              0,0,0,1,0,0,1,1,0,0,0});
